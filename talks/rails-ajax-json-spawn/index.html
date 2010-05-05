@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC
+    "-//W3C//DTD XHTML 1.1 plus MathML 2.0 plus SVG 1.1//EN"
+    "http://www.w3.org/2002/04/xhtml-math-svg/xhtml-math-svg.dtd">
+<html xmlns:svg='http://www.w3.org/2000/svg' xml:lang='en' xmlns='http://www.w3.org/1999/xhtml'>
+<head><meta content='application/xhtml+xml;charset=utf-8' http-equiv='Content-type' /><title></title></head>
+<body>
+<h1 id='rails_jquery_ajax_json_and_spawn_asynchronous_processing'>Rails, jquery AJAX, JSON and Spawn asynchronous processing</h1>
+
+<p>Igal Koshevoy &#8211; May 4, 2010</p>
+
+<p>http://igal.github.com/talks/rails-ajax-json-spawn/</p>
+
+<h2 id='why'>Why?</h2>
+
+<p>We needed to build a system to issue complimentary tickets to <a href='http://opensourcebridge.org/'>Open Source Bridge</a> conference speakers, volunteers and raffle winners.</p>
+
+<p>Challenge was that doing this required communicating with a number of slow external services and we needed a way to display status.</p>
+
+<p>Complete source code is at <a href='http://github.com/igal/compticketeer'>http://github.com/igal/compticketeer</a></p>
+
+<h2 id='async_processing_with_spawn'>Async processing with Spawn</h2>
+
+<ul>
+<li>
+<p>Asynchronous processing options</p>
+
+<ul>
+<li>My earlier analysis: <a href='http://wiki.github.com/igal/rubyqueues/'>http://wiki.github.com/igal/rubyqueues/</a></li>
+
+<li><a href='http://github.com/tra/spawn'>Spawn</a>: Starts processing immediately, simple to setup because there&#8217;s no service to start &#8211; but has no limits on concurrency.</li>
+
+<li><a href='http://github.com/tobi/delayed_job'>Delayed::Job</a>: Infrequent but expensive polling, simple to setup but requires managing a cron runner to start jobs.</li>
+
+<li><a href='http://adam.blog.heroku.com/past/2010/4/24/beanstalk_a_simple_and_fast_queueing_backend/'>beanstalkd with stalker</a>: Frequent and lightweight polling, requires managing a queue server and set of worker processes.</li>
+</ul>
+</li>
+
+<li>
+<p>Install the <code>spawn</code> plugin:</p>
+
+<pre><code>  `./script/plugin install git://github.com/tra/spawn.git`</code></pre>
+</li>
+
+<li>
+<p>Use <code>spawn</code>:</p>
+
+<pre><code>  spawn { 
+      # Your asynchronous processing code here:
+      puts &quot;Nap time.&quot;
+      sleep 2
+      puts &quot;Zzzz.&quot;
+      sleep 2
+      puts &quot;Yawn.&quot;
+  }</code></pre>
+</li>
+
+<li>
+<p>Make spawn synchronous during tests, in <code>config/environments/test.rb</code>:</p>
+
+<p># Run Spawn blocks synchronously in tests. Spawn::method :yield</p>
+</li>
+</ul>
+
+<h2 id='json'>JSON</h2>
+
+<ul>
+<li>
+<p>Add gem dependency to <code>config/environment.rb</code>:</p>
+
+<pre><code>  ...
+  Rails::Initializer.run do |config|
+    config.gem &#39;json&#39;
+    ...
+  end</code></pre>
+</li>
+
+<li>
+<p>Add initializer to use it in <code>config/initializers/activesupport_json_init.rb</code>:</p>
+
+<pre><code>  # Use the JSON gem:
+  ActiveSupport::JSON.backend = &#39;JSONGem&#39;</code></pre>
+</li>
+
+<li>
+<p>Emit JSON from actions:</p>
+
+<pre><code> def show
+   @batch = Batch.find(params[:id])
+
+   respond_to do |format|
+     format.html # show.html.erb
+     format.json do
+       render :json =&gt; @batch.to_json(
+         :methods =&gt; [:done?],
+         :include =&gt; {
+           :tickets =&gt; {:methods =&gt; [:status_label, :done?, :success?]}
+         }
+       )
+     end
+   end
+ end</code></pre>
+</li>
+</ul>
+
+<h1 id='jquery_ajax'>jQuery AJAX</h1>
+
+<ul>
+<li>Include jQuery JavaScript file in your Rails application layout</li>
+
+<li>Emit some kind of status to indicate that the work is done in the DOM to stop polling</li>
+
+<li>Mark fields to update using DOM ids</li>
+
+<li>Poll using AJAX unless done</li>
+
+<li>Update the DOM elements</li>
+
+<li>Repoll until done</li>
+</ul>
+</body></html>
