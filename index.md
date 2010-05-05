@@ -11,4 +11,5 @@ Source
 
 Talks
 -----
-   * [Rails, jQuery AJAX, JSON and Spawn async processing](/talks/rails-ajax-json-spawn/)
+
+* [Rails, jQuery AJAX, JSON and Spawn async processing](/talks/rails-ajax-json-spawn/)
